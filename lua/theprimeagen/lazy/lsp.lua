@@ -1,22 +1,3 @@
-local function filter(arr, fn)
-  if type(arr) ~= "table" then
-    return arr
-  end
-
-  local filtered = {}
-  for k, v in pairs(arr) do
-    if fn(v, k, arr) then
-      table.insert(filtered, v)
-    end
-  end
-
-  return filtered
-end
-
-local function filterReactDTS(value)
-  return string.match(value.targetUri, 'react/index.d.ts') == nil
-end
-
 return {
     "neovim/nvim-lspconfig",
     dependencies = {
@@ -47,7 +28,9 @@ return {
             ensure_installed = {
                 "lua_ls",
                 "ts_ls",
-                "eslint"
+                "eslint",
+                "cssls",
+                "stylelint_lsp"
             },
             handlers = {
                 function(server_name) -- default handler (optional)
@@ -86,6 +69,18 @@ return {
                         }
                     }
                 end,
+                ["cssls"] = function()
+                    local lspconfig = require("lspconfig")
+                    lspconfig.cssls.setup {
+                        capabilities = capabilities
+                    }
+                end,
+                ["stylelint_lsp"] = function()
+                    local lspconfig = require("lspconfig")
+                    lspconfig.stylelint_lsp.setup {
+                        capabilities = capabilities
+                    }
+                end,
                 ["eslint"] = function()
                     local lspconfig = require("lspconfig")
                     lspconfig.eslint.setup {
@@ -103,17 +98,7 @@ return {
                     lspconfig.ts_ls.setup {
                         capabilities = capabilities,
                         root_dir = lspconfig.util.root_pattern("package.json"),
-                        single_file_support = false,
-                        handlers = {
-                            ['textDocument/definition'] = function(err, result, method, ...)
-                                if vim.tbl_islist(result) and #result > 1 then
-                                    local filtered_result = filter(result, filterReactDTS)
-                                    return vim.lsp.handlers['textDocument/definition'](err, filtered_result, method, ...)
-                                end
-
-                                vim.lsp.handlers['textDocument/definition'](err, result, method, ...)
-                            end
-                        }
+                        single_file_support = false
                     }
                 end,
             }
@@ -142,6 +127,7 @@ return {
         })
 
         vim.diagnostic.config({
+            virtual_text = true,
             -- update_in_insert = true,
             float = {
                 focusable = false,

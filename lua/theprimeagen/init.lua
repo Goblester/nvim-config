@@ -58,12 +58,45 @@ autocmd('BufEnter', {
     end
 })
 
+local function filter(arr, fn)
+  if type(arr) ~= "table" then
+    return arr
+  end
+
+  local filtered = {}
+  for k, v in pairs(arr) do
+    if fn(v, k, arr) then
+      table.insert(filtered, v)
+    end
+  end
+
+  return filtered
+end
+
+local function filterReactDTS(value)
+  return string.match(value.filename, 'react/index.d.ts') == nil
+end
+
+local function go_to_first_definition()
+    vim.lsp.buf.definition({
+        on_list = function(options)
+            local items = options.items
+            if #items > 1 then
+                items = filter(items, filterReactDTS)
+            end
+
+            vim.fn.setqflist({}, ' ', { title = options.title, items = items, context = options.context })
+            vim.api.nvim_command('cfirst')
+        end
+    })
+end
+
 
 autocmd('LspAttach', {
     group = ThePrimeagenGroup,
     callback = function(e)
         local opts = { buffer = e.buf }
-        vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+        vim.keymap.set("n", "gd", go_to_first_definition, opts)
         vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
         vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
         vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
